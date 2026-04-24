@@ -11,5 +11,8 @@ reports/*
 # Logs del contenedor montados como volumen
 logs/
 
+# Notas locales de sesión — no versionar
+.notes/
+
 # macOS
 .DS_Store
