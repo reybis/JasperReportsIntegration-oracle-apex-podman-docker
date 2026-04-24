@@ -310,10 +310,6 @@ rm -rf reports/*
 podman run -d ... localhost/jri:$JRI_VERSION
 ```
 
-### `podman compose up --build` falla con error de autenticación en Docker Hub
-
-El provider externo `docker-compose` usa el keychain de Docker con credenciales posiblemente vencidas. Usar `podman build` y `podman run` directamente como se indica en este README.
-
 ---
 
 ## Créditos
