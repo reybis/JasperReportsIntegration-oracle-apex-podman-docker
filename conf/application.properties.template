@@ -1,0 +1,33 @@
+#====================================================================
+# JasperReportsIntegration — application.properties
+# Generado automáticamente desde application.properties.template
+# Las variables son sustituidas desde el archivo .env al iniciar el contenedor
+#====================================================================
+
+[application]
+configFileVersion=2.9.0
+jndiPrefix=java:comp/env/jdbc/
+infoPageIsEnabled=true
+reportsPath=
+
+#====================================================================
+# JDBC datasource — Oracle Database
+#====================================================================
+[datasource:default]
+type=jdbc
+url=jdbc:oracle:thin:@${ORACLE_HOST}:${ORACLE_PORT}/${ORACLE_SERVICE}
+username=${ORACLE_APP_SCHEMA}
+password=${ORACLE_APP_PWD}
+
+#====================================================================
+# Direct printing
+#====================================================================
+[directPrinting]
+isEnabled=false
+displayPrintDialog=false
+
+#====================================================================
+# Save File on Server
+#====================================================================
+[saveFileOnServer]
+isEnabled=false

@@ -1,0 +1,14 @@
+# Entorno — contiene credenciales
+.env
+
+# Generado en runtime desde application.properties.template
+conf/application.properties
+
+# Reportes generados en runtime (se copian desde la imagen al primer arranque)
+reports/*
+
+# Logs del contenedor montados como volumen
+logs/
+
+# macOS
+.DS_Store

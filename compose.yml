@@ -1,0 +1,36 @@
+name: jasper-reports-integration
+
+services:
+  jri:
+    build:
+      context: .
+      args:
+        JRI_VERSION: ${JRI_VERSION:-3.0.0}
+        JRI_JASPER: ${JRI_JASPER:-7.0.1}
+    image: jri:${JRI_VERSION:-3.0.0}
+    container_name: ${JRI_CONTAINER:-jri}
+    restart: on-failure:3
+    env_file: .env
+    environment:
+      OC_JASPER_CONFIG_HOME: /opt/jri
+    volumes:
+      - ./reports:/opt/jri/reports:z
+      - jri-logs:/opt/jri/logs
+    ports:
+      - "${JRI_HOST_PORT:-8090}:8080"
+    networks:
+      - oracle-dev-lab
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/jri"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  jri-logs:
+
+networks:
+  oracle-dev-lab:
+    external: true
+    name: ${PODMAN_NETWORK}
