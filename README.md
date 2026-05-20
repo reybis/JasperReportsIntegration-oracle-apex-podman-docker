@@ -48,8 +48,10 @@
 jasper-reports-integration/
 ├── .env.sample                          # Variables de entorno — copiar a .env y ajustar
 ├── Dockerfile                           # Imagen: Tomcat 10 + JRI war
-├── compose.yml                          # Definición del servicio
+├── compose.yml                          # Definición del servicio (usado por deploy-compose.sh)
 ├── docker-entrypoint.sh                 # Genera application.properties + seed de reports
+├── deploy-podman.sh                     # Script de despliegue con podman run directo
+├── deploy-compose.sh                    # Script de despliegue con podman-compose
 ├── conf/
 │   └── application.properties.template  # Template del datasource JRI (usa vars de .env)
 ├── reports/                             # Volumen: reportes .jrxml
@@ -98,23 +100,38 @@ Editar `.env` con los valores del ambiente:
 
 ```bash
 # Verificar que la red existe
+source .env
 podman network inspect $PODMAN_NETWORK
 ```
 
-### Paso 1 — Build
+### Opción A — Script automatizado (recomendado)
+
+Los scripts `deploy-podman.sh` y `deploy-compose.sh` realizan automáticamente el build, la limpieza del contenedor/imagen anterior y la verificación de arranque. Ver sección [Scripts de despliegue](#scripts-de-despliegue) para más detalle.
+
+```bash
+# Sin podman-compose
+bash deploy-podman.sh
+
+# Con podman-compose
+bash deploy-compose.sh
+```
+
+### Opción B — Pasos manuales
+
+#### Paso 1 — Build
 
 ```bash
 source .env
-cd jasper-reports-integration
 podman build \
   --build-arg JRI_VERSION=$JRI_VERSION \
   --build-arg JRI_JASPER=$JRI_JASPER \
   -t jri:$JRI_VERSION .
 ```
 
-### Paso 2 — Levantar el contenedor JRI
+#### Paso 2 — Levantar el contenedor JRI
 
 ```bash
+mkdir -p reports
 podman run -d \
   --name $JRI_CONTAINER \
   --network $PODMAN_NETWORK \
@@ -169,10 +186,61 @@ EOF
 
 ---
 
+## Scripts de despliegue
+
+### `deploy-podman.sh` — sin podman-compose
+
+Realiza la limpieza del contenedor e imagen anteriores, el build y el arranque usando `podman run` directamente. No requiere dependencias adicionales.
+
+```bash
+bash deploy-podman.sh
+```
+
+### `deploy-compose.sh` — con podman-compose
+
+Usa `podman-compose` (wrapper de `compose.yml`). Requiere `podman-compose` instalado.
+
+```bash
+bash deploy-compose.sh
+```
+
+#### Instalar podman-compose
+
+**macOS:**
+```bash
+pip3 install podman-compose
+# Si el binario no está en PATH:
+export PATH="$PATH:/Users/$USER/Library/Python/3.x/bin"
+```
+
+**Oracle Linux / RHEL:**
+```bash
+sudo dnf install -y python3-pip
+pip3 install podman-compose
+# Verificar
+which podman-compose
+```
+
+> `podman compose` (sin guión) es un wrapper nativo de Podman que busca `docker-compose` o `podman-compose` en el PATH. Si ninguno está instalado lanza `Error: looking up compose provider failed`.
+
+Ambos scripts leen `.env`, limpian la instalación previa, hacen build y verifican que JRI responde (`HTTP 200` o `302`) antes de terminar.
+
+---
+
 ## Re-despliegue del contenedor JRI
 
 Usar cuando cambia el `Dockerfile`, el template de configuración o la versión de JRI.
 **No requiere volver a ejecutar `init-db.sh`.**
+
+```bash
+# Con script (recomendado)
+bash deploy-podman.sh
+# o
+bash deploy-compose.sh
+```
+
+<details>
+<summary>Pasos manuales equivalentes</summary>
 
 ```bash
 source .env
@@ -193,6 +261,7 @@ podman run -d \
   --restart on-failure:3 \
   localhost/jri:$JRI_VERSION
 ```
+</details>
 
 ---
 
@@ -201,22 +270,30 @@ podman run -d \
 Usar al partir desde cero: ambiente nuevo, schema borrado o cambio de credenciales.
 
 ```bash
+# 1. Desplegar contenedor
+bash deploy-podman.sh
+
+# 2. Re-instalar objetos PL/SQL
+bash scripts/init-db.sh
+```
+
+<details>
+<summary>Pasos manuales equivalentes</summary>
+
+```bash
 source .env
 
-# 1. Limpiar
 podman rm -f $JRI_CONTAINER
 podman rmi localhost/jri:$JRI_VERSION
 
 # Opcional: forzar descarga fresca de la imagen base
 podman rmi docker.io/library/tomcat:10-jre17-temurin
 
-# 2. Build
 podman build \
   --build-arg JRI_VERSION=$JRI_VERSION \
   --build-arg JRI_JASPER=$JRI_JASPER \
   -t jri:$JRI_VERSION .
 
-# 3. Contenedor
 podman run -d \
   --name $JRI_CONTAINER \
   --network $PODMAN_NETWORK \
@@ -227,9 +304,9 @@ podman run -d \
   --restart on-failure:3 \
   localhost/jri:$JRI_VERSION
 
-# 4. Base de datos
 bash scripts/init-db.sh
 ```
+</details>
 
 ---
 
